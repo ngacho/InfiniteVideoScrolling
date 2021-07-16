@@ -1,22 +1,27 @@
 package com.phantomrunner.infinitevideos.data.remote
 
+import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.phantomrunner.infinitevideos.BuildConfig
 import com.phantomrunner.infinitevideos.data.model.VideoSearchResponse
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class VideoRepo {
 
-    lateinit var videoResponseLiveData : MutableLiveData<VideoSearchResponse>
+    var videoResponseLiveData : MutableLiveData<VideoSearchResponse> = MutableLiveData()
+
     var videoSearchService: VideoSearchService
 
 
     init {
-        videoResponseLiveData = MutableLiveData()
 
         val loggingInterceptor = HttpLoggingInterceptor()
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
@@ -46,6 +51,25 @@ class VideoRepo {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(VideoSearchService::class.java)
+    }
+
+    fun getVideos(resultsPerPage : Long = 10){
+        videoSearchService.searchVideos(resultsPerPage)
+            .enqueue(object : Callback<VideoSearchResponse> {
+                override fun onResponse(
+                    call: Call<VideoSearchResponse>,
+                    response: Response<VideoSearchResponse>
+                ) {
+                    videoResponseLiveData.postValue(response.body())
+                    val video = videoResponseLiveData.value?.videos?.get(0)?.link
+                    Log.i("Video Repo", "onResponse: link -> $video")
+                }
+
+                override fun onFailure(call: Call<VideoSearchResponse>, t: Throwable) {
+                    Log.e("Video Repo", "onFailure: Failed!!")
+                }
+
+            })
     }
 
 
